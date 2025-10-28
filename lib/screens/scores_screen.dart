@@ -206,35 +206,35 @@ class _ScoresScreenState extends State<ScoresScreen> {
                   ),
 
                   const SizedBox(height: 12),
-
-                  if (_getCategories().isNotEmpty)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          FilterChip(
-                            label: const Text('Todas'),
-                            selected: _selectedCategory == null,
-                            onSelected: (selected) {
-                              _onCategoryChanged(null);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ..._getCategories().map((category) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(category),
-                                selected: _selectedCategory == category,
-                                onSelected: (selected) {
-                                  _onCategoryChanged(selected ? category : null);
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                      ),
-                    ),
+                  //
+                  // if (_getCategories().isNotEmpty)
+                  //   SingleChildScrollView(
+                  //     scrollDirection: Axis.horizontal,
+                  //     child: Row(
+                  //       children: [
+                  //         FilterChip(
+                  //           label: const Text('Todas'),
+                  //           selected: _selectedCategory == null,
+                  //           onSelected: (selected) {
+                  //             _onCategoryChanged(null);
+                  //           },
+                  //         ),
+                  //         const SizedBox(width: 8),
+                  //         ..._getCategories().map((category) {
+                  //           return Padding(
+                  //             padding: const EdgeInsets.only(right: 8),
+                  //             child: FilterChip(
+                  //               label: Text(category),
+                  //               selected: _selectedCategory == category,
+                  //               onSelected: (selected) {
+                  //                 _onCategoryChanged(selected ? category : null);
+                  //               },
+                  //             ),
+                  //           );
+                  //         }).toList(),
+                  //       ],
+                  //     ),
+                  //   ),
                 ],
               ),
             ),
@@ -433,12 +433,12 @@ class _ScoresScreenState extends State<ScoresScreen> {
                     score.keySignature,
                     Colors.green,
                   ),
-                  if (score.category != null)
-                    _buildInfoChip(
-                      Icons.category,
-                      score.category!,
-                      Colors.indigo,
-                    ),
+                  // if (score.category != null)
+                  //   _buildInfoChip(
+                  //     Icons.category,
+                  //     score.category!,
+                  //     Colors.indigo,
+                  //   ),
                   if (score.difficulty != null)
                     _buildInfoChip(
                       Icons.star,
