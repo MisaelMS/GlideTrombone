@@ -52,16 +52,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (user != null) {
+        final loggedUser = await _db.loginUser(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      if (user != null && mounted) {
-        _db.printStats();
+        setState(() {
+          _isLoading = false;
+        });
 
-        _showSuccessDialog(user.name);
+        if (loggedUser != null && mounted) {
+          _db.printStats();
+          _showSuccessDialog(loggedUser.name);
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorDialog('Erro', 'Não foi possível criar a conta.');
       }
-
     } catch (e) {
       setState(() {
         _isLoading = false;
