@@ -49,7 +49,59 @@ class ScoreDatabaseService {
   // ========== CONVERSÃO DE EXERCISE PARA SCOREMODEL ==========
 
   /// Converte Exercise (das escalas) para ScoreModel
+  // ScoreModel exerciseToScoreModel(Exercise exercise, String userId) {
+  //   List<NoteModel> noteModels = [];
+  //   double currentTime = 0.0;
+  //
+  //   for (var musicalNote in exercise.notes) {
+  //     String fullNote = musicalNote.note;
+  //     String pitch;
+  //     int octave;
+  //
+  //     if (fullNote.length == 2) {
+  //       // Exemplo: C4
+  //       pitch = fullNote[0];
+  //       octave = int.parse(fullNote[1]);
+  //     } else if (fullNote.length == 3) {
+  //       // Exemplo: C#4, Bb4
+  //       pitch = fullNote.substring(0, 2);
+  //       octave = int.parse(fullNote[2]);
+  //     } else {
+  //       throw ArgumentError('Formato de nota inválido: $fullNote');
+  //     }
+  //
+  //     noteModels.add(NoteModel(
+  //       pitch: pitch,
+  //       octave: octave,
+  //       duration: 1.0,
+  //       startTime: currentTime,
+  //       displayName: musicalNote.displayName,
+  //       position: musicalNote.position,
+  //       isRest: false,
+  //     ));
+  //
+  //     currentTime += 1.0;
+  //   }
+  //
+  //   return ScoreModel.create(
+  //     id: exercise.id!.isNotEmpty ? exercise.id : null,
+  //     title: exercise.name,
+  //     bpm: exercise.tempo,
+  //     timeSignature: exercise.timeSignature.isNotEmpty ? exercise.timeSignature :'4/4',
+  //     keySignature: exercise.keySignature,
+  //     notes: noteModels,
+  //     userId: userId,
+  //     category: 'Escalas',
+  //     difficulty: _inferDifficulty(exercise.notes.length),
+  //   );
+  // }
+
   ScoreModel exerciseToScoreModel(Exercise exercise, String userId) {
+    print('\n🔄 === CONVERTENDO EXERCISE PARA SCOREMODEL ===');
+    print('   Exercise ID: ${exercise.id ?? "NULL"}');
+    print('   Exercise Name: ${exercise.name}');
+    print('   User ID: $userId');
+
     List<NoteModel> noteModels = [];
     double currentTime = 0.0;
 
@@ -83,16 +135,37 @@ class ScoreDatabaseService {
       currentTime += 1.0;
     }
 
-    return ScoreModel.create(
+    // 🔥 USA O ID DO EXERCISE OU GERA UM NOVO SE FOR NULL/VAZIO
+    final scoreId = (exercise.id != null && exercise.id!.isNotEmpty)
+        ? exercise.id!
+        : DateTime.now().millisecondsSinceEpoch.toString();
+
+    print('   Score ID será: $scoreId');
+    print('   ID veio do Exercise: ${exercise.id != null && exercise.id!.isNotEmpty}');
+
+    // 🔥 USA O CONSTRUTOR DIRETO (como no seu exemplo)
+    final score = ScoreModel(
+      id: scoreId,
       title: exercise.name,
       bpm: exercise.tempo,
       timeSignature: '4/4',
       keySignature: exercise.keySignature,
       notes: noteModels,
       userId: userId,
+      createdAt: DateTime.now(),
+      updatedAt: null,
+      description: (exercise.id != null && exercise.id!.isNotEmpty)
+          ? 'Exercício pré-definido: ${exercise.name}'
+          : null,
       category: 'Escalas',
       difficulty: _inferDifficulty(exercise.notes.length),
     );
+
+    print('   ✅ ScoreModel criado com ID: ${score.id}');
+    print('   Total de notas: ${noteModels.length}');
+    print('==========================================\n');
+
+    return score;
   }
 
   Exercise scoreModelToExercise(ScoreModel score) {

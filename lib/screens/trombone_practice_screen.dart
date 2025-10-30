@@ -216,7 +216,7 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
       final existingScores = _scoreDbService.getUserScores(currentUser.id);
 
       final matchingScore = existingScores.firstWhere(
-            (score) => score.title == currentExercise.name,
+            (score) => score.id == currentExercise.id,
         orElse: () {
           final newScore = _scoreDbService.exerciseToScoreModel(
             currentExercise,
