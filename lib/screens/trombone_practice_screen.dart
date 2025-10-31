@@ -909,22 +909,22 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
                 _showExerciseSelection();
               },
             ),
-
-            ListTile(
-              title: const Text('Sensibilidade'),
-              subtitle: Slider(
-                value: _sensitivity,
-                onChanged: (value) {
-                  setState(() {
-                    _sensitivity = value;
-                  });
-                },
-                min: 0.1,
-                max: 1.0,
-                divisions: 9,
-                label: '${(_sensitivity * 100).round()}%',
-              ),
-            ),
+            //
+            // ListTile(
+            //   title: const Text('Sensibilidade'),
+            //   subtitle: Slider(
+            //     value: _sensitivity,
+            //     onChanged: (value) {
+            //       setState(() {
+            //         _sensitivity = value;
+            //       });
+            //     },
+            //     min: 0.1,
+            //     max: 1.0,
+            //     divisions: 9,
+            //     label: '${(_sensitivity * 100).round()}%',
+            //   ),
+            // ),
             ListTile(
               title: Text(_isMetronomePlaying ? 'Parar Metrônomo' : 'Iniciar Metrônomo'),
               subtitle: Text('${_exercises[_currentExercise].tempo} BPM - 4/4'),
