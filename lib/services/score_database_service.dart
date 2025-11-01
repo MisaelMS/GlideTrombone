@@ -135,7 +135,6 @@ class ScoreDatabaseService {
       currentTime += 1.0;
     }
 
-    // 🔥 USA O ID DO EXERCISE OU GERA UM NOVO SE FOR NULL/VAZIO
     final scoreId = (exercise.id != null && exercise.id!.isNotEmpty)
         ? exercise.id!
         : DateTime.now().millisecondsSinceEpoch.toString();
@@ -143,7 +142,6 @@ class ScoreDatabaseService {
     print('   Score ID será: $scoreId');
     print('   ID veio do Exercise: ${exercise.id != null && exercise.id!.isNotEmpty}');
 
-    // 🔥 USA O CONSTRUTOR DIRETO (como no seu exemplo)
     final score = ScoreModel(
       id: scoreId,
       title: exercise.name,

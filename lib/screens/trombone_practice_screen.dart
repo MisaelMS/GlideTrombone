@@ -32,6 +32,7 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
   final AudioService _audioService = AudioService();
   final DatabaseService _dbService = DatabaseService();
   final ScoreDatabaseService _scoreDbService = ScoreDatabaseService();
+  final enhancedPitch = EnhancedPitchDetectionService();
 
   MetronomeService? _metronomeService;
   bool _isMetronomePlaying = false;
@@ -141,6 +142,8 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
 
       _metronomeService = MetronomeService(_audioService);
       print('MetronomeService inicializado');
+
+      await enhancedPitch.initialize();
 
       setState(() {
         _isInitialized = true;
@@ -397,76 +400,64 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     try {
       List<double>? samples = _audioService.processAudioChunk(audioData);
 
-      if (samples == null) {
+      if (samples == null || samples.length < 512) {
         return;
       }
 
-      double energy = 0.0;
-      for (double sample in samples) {
-        energy += sample * sample;
-      }
-      energy = energy / samples.length;
+      String? detectedNote = enhancedPitch.detectPitch(
+        samples,
+        sampleRate: 22050,
+      );
 
-      if (energy < 0.001) {
-        return;
-      }
+      if (detectedNote != null) {
+        double detectedFreq = _getNoteFrequency(detectedNote);
+        String targetNote = _exercises[_currentExercise].notes[_currentNoteIndex].note;
+        double targetFreq = _getNoteFrequency(targetNote);
 
-      double? frequency = _detectFrequencyYIN(samples, 22050);
+        double difference = (detectedFreq - targetFreq).abs();
+        double accuracy = math.max(0, 1 - (difference / (targetFreq * 0.15)));
 
-      if (frequency != null && frequency >= 80 && frequency <= 2000) {
-        String? detectedNote = _frequencyToPitch(frequency);
+        setState(() {
+          _currentNote = detectedNote;
+          _currentPitch = detectedFreq;
+          _pitchAccuracy = accuracy;
+        });
 
-        if (detectedNote != null) {
-          String? smoothedNote = _smoothDetection(detectedNote);
+        _accuracyController.animateTo(_pitchAccuracy);
 
-          if (smoothedNote != null) {
-            double detectedFreq = _getNoteFrequency(smoothedNote);
-            String targetNote = _exercises[_currentExercise].notes[_currentNoteIndex].note;
-            double targetFreq = _getNoteFrequency(targetNote);
-            double difference = (detectedFreq - targetFreq).abs();
-            double accuracy = math.max(0, 1 - (difference / (targetFreq * 0.15)));
+        if (_pitchAccuracy > 0.8 && _lastAccuracy <= 0.8) {
+          _audioService.playCorrectSound();
+          _noteProgressController.forward();
 
-            setState(() {
-              _currentNote = smoothedNote;
-              _currentPitch = detectedFreq;
-              _pitchAccuracy = accuracy;
-            });
+          _recordPlayedNote(
+            expectedNote: targetNote,
+            playedNote: detectedNote,
+            expectedTime: _currentNoteIndex.toDouble(),
+            playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
+            isCorrect: true,
+          );
 
-            _accuracyController.animateTo(_pitchAccuracy);
-
-            if (_pitchAccuracy > 0.8 && _lastAccuracy <= 0.8) {
-              _audioService.playCorrectSound();
-              _noteProgressController.forward();
-
-              _recordPlayedNote(
-                expectedNote: targetNote,
-                playedNote: smoothedNote,
-                expectedTime: _currentNoteIndex.toDouble(),
-                playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
-                isCorrect: true,
-              );
-
-              Future.delayed(const Duration(milliseconds: 1500), () {
-                if (_pitchAccuracy > 0.8 && _isListening) {
-                  _nextNote();
-                }
-              });
-            } else if (_pitchAccuracy < 0.3 && _lastAccuracy >= 0.3) {
-              _audioService.playIncorrectSound();
-              _noteProgressController.reverse();
-
-              _recordPlayedNote(
-                expectedNote: targetNote,
-                playedNote: smoothedNote,
-                expectedTime: _currentNoteIndex.toDouble(),
-                playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
-                isCorrect: false,
-              );
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (_pitchAccuracy > 0.8 && _isListening) {
+              _nextNote();
             }
-
-            _lastAccuracy = _pitchAccuracy;
-          }
+          });
         }
+
+        else if (_pitchAccuracy < 0.3 && _lastAccuracy >= 0.3) {
+          _audioService.playIncorrectSound();
+          _noteProgressController.reverse();
+
+          _recordPlayedNote(
+            expectedNote: targetNote,
+            playedNote: detectedNote,
+            expectedTime: _currentNoteIndex.toDouble(),
+            playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
+            isCorrect: false,
+          );
+        }
+
+        _lastAccuracy = _pitchAccuracy;
       }
 
     } catch (e) {
@@ -474,113 +465,8 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     }
   }
 
-  double? _detectFrequencyYIN(List<double> buffer, double sampleRate) {
-    int bufferSize = buffer.length;
-    if (bufferSize < 1024) return null;
-
-    List<double> yinBuffer = List.filled(bufferSize ~/ 2, 0.0);
-
-    for (int tau = 0; tau < yinBuffer.length; tau++) {
-      for (int i = 0; i < yinBuffer.length; i++) {
-        if (i + tau < buffer.length) {
-          double delta = buffer[i] - buffer[i + tau];
-          yinBuffer[tau] += delta * delta;
-        }
-      }
-    }
-
-    yinBuffer[0] = 1.0;
-    double runningSum = 0.0;
-
-    for (int tau = 1; tau < yinBuffer.length; tau++) {
-      runningSum += yinBuffer[tau];
-      if (runningSum > 0) {
-        yinBuffer[tau] *= tau / runningSum;
-      }
-    }
-
-    double threshold = 0.1;
-    int tau = 2;
-
-    while (tau < yinBuffer.length) {
-      if (yinBuffer[tau] < threshold) {
-        while (tau + 1 < yinBuffer.length && yinBuffer[tau + 1] < yinBuffer[tau]) {
-          tau++;
-        }
-        break;
-      }
-      tau++;
-    }
-
-    if (tau == yinBuffer.length || yinBuffer[tau] >= threshold) {
-      return null;
-    }
-
-    double betterTau = tau.toDouble();
-    if (tau > 0 && tau < yinBuffer.length - 1) {
-      double s0 = yinBuffer[tau - 1];
-      double s1 = yinBuffer[tau];
-      double s2 = yinBuffer[tau + 1];
-      double denominator = 2 * (2 * s1 - s2 - s0);
-      if (denominator != 0) {
-        betterTau = tau + (s2 - s0) / denominator;
-      }
-    }
-
-    return sampleRate / betterTau;
-  }
-
-  String? _frequencyToPitch(double frequency) {
-    if (frequency <= 0) return null;
-
-    double a4 = 440.0;
-    double c0 = a4 * math.pow(2, -4.75);
-
-    double halfSteps = 12 * (math.log(frequency / c0) / math.ln2);
-    int roundedHalfSteps = halfSteps.round();
-
-    List<String> noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
-
-    int octave = roundedHalfSteps ~/ 12;
-    int noteIndex = roundedHalfSteps % 12;
-
-    if (noteIndex < 0) {
-      noteIndex += 12;
-      octave -= 1;
-    }
-
-    if (octave < 0 || octave > 8) return null;
-
-    return '${noteNames[noteIndex]}$octave';
-  }
-
   List<String?> _recentDetections = [];
   final int _detectionBufferSize = 3;
-
-  String? _smoothDetection(String? currentNote) {
-    _recentDetections.add(currentNote);
-
-    if (_recentDetections.length > _detectionBufferSize) {
-      _recentDetections.removeAt(0);
-    }
-
-    Map<String?, int> counts = {};
-    for (String? note in _recentDetections) {
-      counts[note] = (counts[note] ?? 0) + 1;
-    }
-
-    String? mostCommon;
-    int maxCount = 0;
-
-    counts.forEach((note, count) {
-      if (note != null && count > maxCount) {
-        mostCommon = note;
-        maxCount = count;
-      }
-    });
-
-    return maxCount >= (_detectionBufferSize * 0.6) ? mostCommon : null;
-  }
 
   void _nextNote() {
     if (_currentNoteIndex < _exercises[_currentExercise].notes.length - 1) {

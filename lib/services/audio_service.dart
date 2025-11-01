@@ -229,7 +229,7 @@ class AudioService {
         print('Nota MIDI parada');
 
       } else {
-        print('Usando SÍNTESE (MIDI desabilitado temporariamente)');
+        print('Usando SÍNTESE');
         await _playSynthesizedNote(pitch, octave, duration);
       }
     } catch (e, stackTrace) {
@@ -467,6 +467,11 @@ class EnhancedPitchDetectionService {
 
   List<String?> _recentDetections = [];
   final int _bufferSize = 3;
+
+  Future<void> initialize() async {
+    print('EnhancedPitchDetectionService inicializado');
+    _recentDetections.clear();
+  }
 
   String? detectPitch(List<double> audioData, {double sampleRate = 22050}) {
     if (audioData.length < 512) {
