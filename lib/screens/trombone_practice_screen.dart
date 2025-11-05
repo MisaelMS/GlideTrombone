@@ -52,7 +52,6 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
 
   List<PlayedNoteModel> _playedNotes = [];
 
-  double _sensitivity = 0.7;
   int _currentExercise = 0;
 
   late AnimationController _pulseController;
@@ -327,7 +326,6 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     if (!_isInitialized || _isListening) return;
 
     try {
-      _recentDetections.clear();
       _playedNotes.clear();
 
       _startTimer();
@@ -464,9 +462,6 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
       print('Erro no processamento de áudio: $e');
     }
   }
-
-  List<String?> _recentDetections = [];
-  final int _detectionBufferSize = 3;
 
   void _nextNote() {
     if (_currentNoteIndex < _exercises[_currentExercise].notes.length - 1) {
@@ -673,12 +668,29 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     final currentExercise = _exercises[_currentExercise];
     final currentTargetNote = currentExercise.notes[_currentNoteIndex].note;
 
+    final size = MediaQuery.of(context).size;
+    final isLandscape = size.width > size.height;
+    final isSmallDevice = size.width < 1000;
+    final isVerySmallWidth = size.width < 400;
+
+    final useTwoColumns = isLandscape && isSmallDevice;
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: isVerySmallWidth
+            ? const Text(
+          'Prática',
+          overflow: TextOverflow.ellipsis,
+        )
+            : Row(
           children: [
-            const Text('Prática de Trombone'),
-            const Spacer(),
+            const Expanded(
+              child: Text(
+                'Prática de Trombone',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
             PracticeTimerWidget(
               formattedTime: _formattedTime,
               isListening: _isListening,
@@ -689,6 +701,16 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          if (isVerySmallWidth)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Center(
+                child: PracticeTimerWidget(
+                  formattedTime: _formattedTime,
+                  isListening: _isListening,
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadExercises,
@@ -713,51 +735,185 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              ExerciseHeaderWidget(
-                exercise: currentExercise,
-                currentNoteIndex: _currentNoteIndex,
-                bestScore: _bestScore,
-                onPlayReference: () => _playReferenceNote(currentTargetNote),
-              ),
+          child: useTwoColumns
+              ? _buildLandscapeLayout(currentExercise, currentTargetNote)
+              : _buildPortraitLayout(currentExercise, currentTargetNote),
+        ),
+      ),
+    );
+  }
 
-              Expanded(
-                flex: 5,
-                child: Container(
-                  margin: const EdgeInsets.all(20),
-                  child: ScoreDisplayWidget(
-                    notes: currentExercise.notes,
-                    currentNoteIndex: _currentNoteIndex,
-                    detectedNote: _currentNote,
-                    accuracy: _pitchAccuracy,
-                    isListening: _isListening,
-                    accuracyAnimation: _accuracyColorAnimation,
-                    progressAnimation: _noteProgressAnimation,
-                    title: currentExercise.name,
-                    keySignature: currentExercise.keySignature,
-                    timeSignature: '4/4',
-                  ),
+  // Layout normal (1 coluna) - para em pé ou telas grandes
+  Widget _buildPortraitLayout(Exercise currentExercise, String currentTargetNote) {
+    return Column(
+      children: [
+        ExerciseHeaderWidget(
+          exercise: currentExercise,
+          currentNoteIndex: _currentNoteIndex,
+          bestScore: _bestScore,
+          onPlayReference: () => _playReferenceNote(currentTargetNote),
+        ),
+
+        Expanded(
+          flex: 5,
+          child: Container(
+            margin: const EdgeInsets.all(20),
+            child: ScoreDisplayWidget(
+              notes: currentExercise.notes,
+              currentNoteIndex: _currentNoteIndex,
+              detectedNote: _currentNote,
+              accuracy: _pitchAccuracy,
+              isListening: _isListening,
+              accuracyAnimation: _accuracyColorAnimation,
+              progressAnimation: _noteProgressAnimation,
+              title: currentExercise.name,
+              keySignature: currentExercise.keySignature,
+              timeSignature: '4/4',
+            ),
+          ),
+        ),
+
+        PracticeStatsWidget(
+          exercise: currentExercise,
+          currentNoteIndex: _currentNoteIndex,
+          currentNote: _currentNote,
+          pitchAccuracy: _pitchAccuracy,
+          accuracyColorAnimation: _accuracyColorAnimation,
+        ),
+
+        const SizedBox(height: 20),
+
+        PracticeControlsWidget(
+          isListening: _isListening,
+          canGoPrevious: _currentNoteIndex > 0,
+          canGoNext: _currentNoteIndex < currentExercise.notes.length - 1,
+          onPrevious: _previousNote,
+          onToggleListening: _isListening ? _stopListening : _startListening,
+          onNext: _nextNote,
+        ),
+      ],
+    );
+  }
+
+  // Layout de 2 colunas - para deitado em tela pequena
+  Widget _buildLandscapeLayout(Exercise currentExercise, String currentTargetNote) {
+    return Row(
+      children: [
+        // Coluna esquerda: Header + Stats + Controls
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              children: [
+                ExerciseHeaderWidget(
+                  exercise: currentExercise,
+                  currentNoteIndex: _currentNoteIndex,
+                  bestScore: _bestScore,
+                  onPlayReference: () => _playReferenceNote(currentTargetNote),
+                ),
+
+                const SizedBox(height: 12),
+
+                PracticeStatsWidget(
+                  exercise: currentExercise,
+                  currentNoteIndex: _currentNoteIndex,
+                  currentNote: _currentNote,
+                  pitchAccuracy: _pitchAccuracy,
+                  accuracyColorAnimation: _accuracyColorAnimation,
+                ),
+
+                const SizedBox(height: 12),
+
+                PracticeControlsWidget(
+                  isListening: _isListening,
+                  canGoPrevious: _currentNoteIndex > 0,
+                  canGoNext: _currentNoteIndex < currentExercise.notes.length - 1,
+                  onPrevious: _previousNote,
+                  onToggleListening: _isListening ? _stopListening : _startListening,
+                  onNext: _nextNote,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Coluna direita: Partitura
+        Expanded(
+          flex: 3,
+          child: Container(
+            margin: const EdgeInsets.all(12.0),
+            child: ScoreDisplayWidget(
+              notes: currentExercise.notes,
+              currentNoteIndex: _currentNoteIndex,
+              detectedNote: _currentNote,
+              accuracy: _pitchAccuracy,
+              isListening: _isListening,
+              accuracyAnimation: _accuracyColorAnimation,
+              progressAnimation: _noteProgressAnimation,
+              title: currentExercise.name,
+              keySignature: currentExercise.keySignature,
+              timeSignature: '4/4',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSettings() {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 400;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: isSmallScreen ? 16.0 : 20.0,
+            right: isSmallScreen ? 16.0 : 20.0,
+            top: isSmallScreen ? 16.0 : 20.0,
+            // Adiciona espaço extra para evitar sobreposição com o teclado
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Configurações',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              SizedBox(height: isSmallScreen ? 16 : 20),
 
-              PracticeStatsWidget(
-                exercise: currentExercise,
-                currentNoteIndex: _currentNoteIndex,
-                currentNote: _currentNote,
-                pitchAccuracy: _pitchAccuracy,
-                accuracyColorAnimation: _accuracyColorAnimation,
+              ListTile(
+                title: const Text('Exercício'),
+                subtitle: Text(_exercises[_currentExercise].name),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showExerciseSelection();
+                },
               ),
 
-              const SizedBox(height: 20),
-
-              PracticeControlsWidget(
-                isListening: _isListening,
-                canGoPrevious: _currentNoteIndex > 0,
-                canGoNext: _currentNoteIndex < currentExercise.notes.length - 1,
-                onPrevious: _previousNote,
-                onToggleListening: _isListening ? _stopListening : _startListening,
-                onNext: _nextNote,
+              ListTile(
+                title: Text(
+                  _isMetronomePlaying ? 'Parar Metrônomo' : 'Iniciar Metrônomo',
+                ),
+                subtitle: Text('${_exercises[_currentExercise].tempo} BPM - 4/4'),
+                leading: Icon(
+                  _isMetronomePlaying ? Icons.stop_circle : Icons.music_note,
+                  color: _isMetronomePlaying ? Colors.red : Colors.indigo,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _toggleMetronome();
+                },
               ),
             ],
           ),
@@ -766,85 +922,44 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     );
   }
 
-  void _showSettings() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Configurações',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            ListTile(
-              title: const Text('Exercício'),
-              subtitle: Text(_exercises[_currentExercise].name),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                Navigator.pop(context);
-                _showExerciseSelection();
-              },
-            ),
-            //
-            // ListTile(
-            //   title: const Text('Sensibilidade'),
-            //   subtitle: Slider(
-            //     value: _sensitivity,
-            //     onChanged: (value) {
-            //       setState(() {
-            //         _sensitivity = value;
-            //       });
-            //     },
-            //     min: 0.1,
-            //     max: 1.0,
-            //     divisions: 9,
-            //     label: '${(_sensitivity * 100).round()}%',
-            //   ),
-            // ),
-            ListTile(
-              title: Text(_isMetronomePlaying ? 'Parar Metrônomo' : 'Iniciar Metrônomo'),
-              subtitle: Text('${_exercises[_currentExercise].tempo} BPM - 4/4'),
-              leading: Icon(
-                _isMetronomePlaying ? Icons.stop_circle : Icons.music_note,
-                color: _isMetronomePlaying ? Colors.red : Colors.indigo,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _toggleMetronome();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showExerciseSelection() {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 400;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Escolher Exercício'),
+        title: Text(
+          'Escolher Exercício',
+          style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
+        ),
         content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.7,
+          width: math.min(MediaQuery.of(context).size.width * 0.8, 400),
           child: ListView.builder(
             shrinkWrap: true,
             itemCount: _exercises.length,
             itemBuilder: (context, index) {
               final exercise = _exercises[index];
               return ListTile(
-                title: Text(exercise.name),
-                subtitle: Text('${exercise.notes.length} notas - ${exercise.tempo} BPM'),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8.0 : 16.0,
+                  vertical: isSmallScreen ? 4.0 : 8.0,
+                ),
+                title: Text(
+                  exercise.name,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: index == _currentExercise
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                subtitle: Text(
+                  '${exercise.notes.length} notas - ${exercise.tempo} BPM',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                ),
                 selected: index == _currentExercise,
+                selectedTileColor: Colors.indigo.withOpacity(0.1),
                 onTap: () {
                   setState(() {
                     _currentExercise = index;
@@ -858,6 +973,15 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
             },
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Fechar',
+              style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+            ),
+          ),
+        ],
       ),
     );
   }
