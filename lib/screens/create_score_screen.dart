@@ -196,9 +196,18 @@ class _CreateScoreScreenState extends State<CreateScoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Detecta tamanho da tela
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+    final isLandscape = size.width > size.height;
+    final useTwoColumns = isLandscape && size.width < 900;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Editar Partitura' : 'Criar Partitura'),
+        title: Text(
+          isEditing ? 'Editar Partitura' : 'Criar Partitura',
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: Colors.indigo.shade600,
         foregroundColor: Colors.white,
         actions: [
@@ -222,32 +231,151 @@ class _CreateScoreScreenState extends State<CreateScoreScreen> {
         ),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Card(
+          child: useTwoColumns
+              ? _buildLandscapeLayout(isSmallScreen)
+              : _buildPortraitLayout(isSmallScreen),
+        ),
+      ),
+    );
+  }
+
+  // Layout vertical (modo retrato)
+  Widget _buildPortraitLayout(bool isSmallScreen) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Informações da Partitura
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Informações da Partitura',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 16 : 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Título da Partitura',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.music_note),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Digite um título';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    _buildConfigFields(isSmallScreen),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Header da lista de notas
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12.0 : 16.0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    'Partitura (${_notes.length} notas)',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                ElevatedButton.icon(
+                  onPressed: _addNote,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(
+                    isSmallScreen ? 'Nota' : 'Adicionar Nota',
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo.shade600,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 12 : 16,
+                      vertical: isSmallScreen ? 8 : 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: isSmallScreen ? 8 : 12),
+
+          // Visualização e lista de notas
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12.0 : 16.0,
+            ),
+            child: _notes.isEmpty
+                ? _buildEmptyState(isSmallScreen)
+                : _buildNotesContent(isSmallScreen),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+        ],
+      ),
+    );
+  }
+
+  // Layout horizontal (modo paisagem para telas pequenas)
+  Widget _buildLandscapeLayout(bool isSmallScreen) {
+    return Row(
+      children: [
+        // Coluna esquerda: Formulário
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
                   elevation: 2,
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Informações da Partitura',
+                          'Informações',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _titleController,
                           decoration: const InputDecoration(
-                            labelText: 'Título da Partitura',
+                            labelText: 'Título',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.music_note),
+                            isDense: true,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -256,259 +384,396 @@ class _CreateScoreScreenState extends State<CreateScoreScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _bpmController,
-                                decoration: const InputDecoration(
-                                  labelText: 'BPM',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.speed),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Digite o BPM';
-                                  }
-                                  final bpm = int.tryParse(value);
-                                  if (bpm == null) {
-                                    return 'Número inválido';
-                                  }
-                                  if (bpm < 40 || bpm > 240) {
-                                    return 'BPM entre 40-240';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _timeSignature,
-                                decoration: const InputDecoration(
-                                  labelText: 'Compasso',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.timer),
-                                ),
-                                items: ['4/4', '3/4', '2/4', '6/8']
-                                    .map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _timeSignature = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _keySignature,
-                                decoration: const InputDecoration(
-                                  labelText: 'Tom',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.key),
-                                ),
-                                items: ['C', 'F', 'Bb', 'Eb', 'Ab', 'G', 'D', 'A', 'E']
-                                    .map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _keySignature = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 12),
+                        _buildConfigFields(true),
                       ],
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+                const SizedBox(height: 12),
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Partitura (${_notes.length} notas)',
+                      '${_notes.length} notas',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     ElevatedButton.icon(
                       onPressed: _addNote,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Adicionar Nota'),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Nota', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo.shade600,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                _buildNotesList(true),
+              ],
+            ),
+          ),
+        ),
+
+        // Coluna direita: Partitura
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: _notes.isEmpty
+                ? _buildEmptyState(true)
+                : Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ScoreDisplayWidget(
+                  notes: _convertToMusicalNotes(),
+                  currentNoteIndex: -1,
+                  title: _titleController.text.isEmpty
+                      ? 'Nova Partitura'
+                      : _titleController.text,
+                  keySignature: _keySignature,
+                  timeSignature: _timeSignature,
+                  tempo: int.tryParse(_bpmController.text),
+                  isListening: false,
+                ),
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-              const SizedBox(height: 12),
+  // Campos de configuração (BPM, Compasso, Tom)
+  Widget _buildConfigFields(bool isSmallScreen) {
+    return isSmallScreen
+        ? Column(
+      children: [
+        TextFormField(
+          controller: _bpmController,
+          decoration: const InputDecoration(
+            labelText: 'BPM',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.speed),
+            isDense: true,
+          ),
+          keyboardType: TextInputType.number,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Digite o BPM';
+            }
+            final bpm = int.tryParse(value);
+            if (bpm == null) {
+              return 'Número inválido';
+            }
+            if (bpm < 40 || bpm > 240) {
+              return 'BPM entre 40-240';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _timeSignature,
+                decoration: const InputDecoration(
+                  labelText: 'Compasso',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.timer),
+                  isDense: true,
+                ),
+                items: ['4/4', '3/4', '2/4', '6/8']
+                    .map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _timeSignature = value!;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _keySignature,
+                decoration: const InputDecoration(
+                  labelText: 'Tom',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.key),
+                  isDense: true,
+                ),
+                items: ['C', 'F', 'Bb', 'Eb', 'Ab', 'G', 'D', 'A', 'E']
+                    .map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _keySignature = value!;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    )
+        : Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: _bpmController,
+            decoration: const InputDecoration(
+              labelText: 'BPM',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.speed),
+              isDense: true,
+            ),
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Digite o BPM';
+              }
+              final bpm = int.tryParse(value);
+              if (bpm == null) {
+                return 'Número inválido';
+              }
+              if (bpm < 40 || bpm > 240) {
+                return 'BPM entre 40-240';
+              }
+              return null;
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: _timeSignature,
+            decoration: const InputDecoration(
+              labelText: 'Compasso',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.timer),
+              isDense: true,
+            ),
+            items: ['4/4', '3/4', '2/4', '6/8']
+                .map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _timeSignature = value!;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: _keySignature,
+            decoration: const InputDecoration(
+              labelText: 'Tom',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.key),
+              isDense: true,
+            ),
+            items: ['C', 'F', 'Bb', 'Eb', 'Ab', 'G', 'D', 'A', 'E']
+                .map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _keySignature = value!;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-              // Score Display
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _notes.isEmpty
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.library_music,
-                          size: 80,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Nenhuma nota adicionada',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Toque em "Adicionar Nota" para começar',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+  // Estado vazio
+  Widget _buildEmptyState(bool isSmallScreen) {
+    return SizedBox(
+      height: isSmallScreen ? 200 : 300,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.library_music,
+              size: isSmallScreen ? 60 : 80,
+              color: Colors.grey.shade400,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            Text(
+              'Nenhuma nota adicionada',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: isSmallScreen ? 16 : 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 8),
+            Text(
+              'Toque em "Adicionar Nota" para começar',
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: isSmallScreen ? 12 : 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Conteúdo com notas (partitura + lista)
+  Widget _buildNotesContent(bool isSmallScreen) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.5,
+      child: Column(
+        children: [
+          Expanded(
+            flex: 3,
+            child: ScoreDisplayWidget(
+              notes: _convertToMusicalNotes(),
+              currentNoteIndex: -1,
+              title: _titleController.text.isEmpty
+                  ? 'Nova Partitura'
+                  : _titleController.text,
+              keySignature: _keySignature,
+              timeSignature: _timeSignature,
+              tempo: int.tryParse(_bpmController.text),
+              isListening: false,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          Expanded(
+            flex: 2,
+            child: _buildNotesList(isSmallScreen),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Lista de notas
+  Widget _buildNotesList(bool isSmallScreen) {
+    return Card(
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 8.0 : 12.0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.list,
+                  color: Colors.indigo.shade600,
+                  size: isSmallScreen ? 18 : 20,
+                ),
+                SizedBox(width: isSmallScreen ? 6 : 8),
+                Text(
+                  'Sequência de Notas',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _notes.length,
+              itemBuilder: (context, index) {
+                final note = _notes[index];
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 8.0 : 16.0,
+                    vertical: isSmallScreen ? 2.0 : 4.0,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.indigo.shade600,
+                    foregroundColor: Colors.white,
+                    radius: isSmallScreen ? 14 : 16,
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(fontSize: isSmallScreen ? 10 : 12),
                     ),
-                  )
-                      : Column(
+                  ),
+                  title: Text(
+                    note.displayName ?? '${note.pitch}${note.octave}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: isSmallScreen ? 14 : 16,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${_getDurationName(note.duration)} • ${note.startTime.toStringAsFixed(1)}s${note.position != null ? ' • Pos: ${note.position}' : ''}',
+                    style: TextStyle(fontSize: isSmallScreen ? 10 : 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: ScoreDisplayWidget(
-                          notes: _convertToMusicalNotes(),
-                          currentNoteIndex: -1,
-                          title: _titleController.text.isEmpty
-                              ? 'Nova Partitura'
-                              : _titleController.text,
-                          keySignature: _keySignature,
-                          timeSignature: _timeSignature,
-                          tempo: int.tryParse(_bpmController.text),
-                          isListening: false,
+                      IconButton(
+                        icon: Icon(
+                          Icons.edit,
+                          size: isSmallScreen ? 18 : 20,
                         ),
+                        color: Colors.blue,
+                        onPressed: () => _editNote(index),
+                        tooltip: 'Editar',
+                        padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
+                        constraints: const BoxConstraints(),
                       ),
-                      const SizedBox(height: 16),
-                      // Lista compacta de notas para edição
-                      Expanded(
-                        flex: 2,
-                        child: Card(
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.list,
-                                        color: Colors.indigo.shade600),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'Sequência de Notas',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Divider(height: 1),
-                              Expanded(
-                                child: ListView.builder(
-                                  itemCount: _notes.length,
-                                  itemBuilder: (context, index) {
-                                    final note = _notes[index];
-                                    return ListTile(
-                                      dense: true,
-                                      leading: CircleAvatar(
-                                        backgroundColor:
-                                        Colors.indigo.shade600,
-                                        foregroundColor: Colors.white,
-                                        radius: 16,
-                                        child: Text(
-                                          '${index + 1}',
-                                          style: const TextStyle(
-                                              fontSize: 12),
-                                        ),
-                                      ),
-                                      title: Text(
-                                        note.displayName ?? '${note.pitch}${note.octave}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        '${_getDurationName(note.duration)} • ${note.startTime.toStringAsFixed(1)}s${note.position != null ? ' • Pos: ${note.position}' : ''}',
-                                        style: const TextStyle(
-                                            fontSize: 12),
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit,
-                                                size: 20),
-                                            color: Colors.blue,
-                                            onPressed: () =>
-                                                _editNote(index),
-                                            tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(
-                                                Icons.delete,
-                                                size: 20),
-                                            color: Colors.red,
-                                            onPressed: () {
-                                              setState(() {
-                                                _notes.removeAt(index);
-                                              });
-                                            },
-                                            tooltip: 'Excluir',
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete,
+                          size: isSmallScreen ? 18 : 20,
                         ),
+                        color: Colors.red,
+                        onPressed: () {
+                          setState(() {
+                            _notes.removeAt(index);
+                          });
+                        },
+                        tooltip: 'Excluir',
+                        padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -583,9 +848,14 @@ class _NoteDialogState extends State<_NoteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 1400;
+
     return AlertDialog(
       title: Text(
-          widget.initialNote != null ? 'Editar Nota' : 'Adicionar Nota'),
+        widget.initialNote != null ? 'Editar Nota' : 'Adicionar Nota',
+        style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -595,6 +865,7 @@ class _NoteDialogState extends State<_NoteDialog> {
               decoration: const InputDecoration(
                 labelText: 'Nota',
                 border: OutlineInputBorder(),
+                isDense: true,
               ),
               items: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
                   .map((String value) {
@@ -610,13 +881,14 @@ class _NoteDialogState extends State<_NoteDialog> {
                 });
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             DropdownButtonFormField<int>(
               value: _octave,
               decoration: const InputDecoration(
                 labelText: 'Oitava',
                 border: OutlineInputBorder(),
                 helperText: 'Trombone: geralmente 2-4',
+                isDense: true,
               ),
               items: [2, 3, 4, 5].map((int value) {
                 return DropdownMenuItem<int>(
@@ -630,12 +902,13 @@ class _NoteDialogState extends State<_NoteDialog> {
                 });
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             DropdownButtonFormField<double>(
               value: _duration,
               decoration: const InputDecoration(
                 labelText: 'Duração',
                 border: OutlineInputBorder(),
+                isDense: true,
               ),
               items: [0.25, 0.5, 1.0, 2.0, 4.0].map((double value) {
                 String label = value == 0.25
@@ -658,25 +931,27 @@ class _NoteDialogState extends State<_NoteDialog> {
                 });
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             TextFormField(
               initialValue: _position,
               decoration: const InputDecoration(
                 labelText: 'Posição do Trombone (opcional)',
                 border: OutlineInputBorder(),
                 helperText: 'Ex: 1°, 2°, 3°, etc.',
+                isDense: true,
               ),
               onChanged: (value) {
                 _position = value.isEmpty ? null : value;
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             TextFormField(
               initialValue: _startTime.toStringAsFixed(1),
               decoration: const InputDecoration(
                 labelText: 'Tempo de Início (segundos)',
                 border: OutlineInputBorder(),
                 helperText: 'Quando a nota deve começar a tocar',
+                isDense: true,
               ),
               keyboardType: TextInputType.number,
               onChanged: (value) {
@@ -692,7 +967,10 @@ class _NoteDialogState extends State<_NoteDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+          ),
         ),
         ElevatedButton(
           onPressed: () {
@@ -711,7 +989,10 @@ class _NoteDialogState extends State<_NoteDialog> {
             backgroundColor: Colors.indigo.shade600,
             foregroundColor: Colors.white,
           ),
-          child: Text(widget.initialNote != null ? 'Salvar' : 'Adicionar'),
+          child: Text(
+            widget.initialNote != null ? 'Salvar' : 'Adicionar',
+            style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+          ),
         ),
       ],
     );

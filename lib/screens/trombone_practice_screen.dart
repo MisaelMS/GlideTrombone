@@ -670,7 +670,7 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
 
     final size = MediaQuery.of(context).size;
     final isLandscape = size.width > size.height;
-    final isSmallDevice = size.width < 1000;
+    final isSmallDevice = size.width < 1400;
     final isVerySmallWidth = size.width < 400;
 
     final useTwoColumns = isLandscape && isSmallDevice;
