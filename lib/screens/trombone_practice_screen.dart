@@ -37,6 +37,8 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
   MetronomeService? _metronomeService;
   bool _isMetronomePlaying = false;
 
+  Timer? _noteTimer;
+
   bool _isListening = false;
   bool _isInitialized = false;
   double _currentPitch = 0.0;
@@ -357,6 +359,9 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
       await _audioSubscription?.cancel();
       _audioSubscription = null;
 
+      _noteTimer?.cancel();
+      _noteTimer = null;
+
       setState(() {
         _isListening = false;
         _currentPitch = 0.0;
@@ -423,6 +428,9 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
 
         _accuracyController.animateTo(_pitchAccuracy);
 
+        int bpm = _exercises[_currentExercise].tempo;
+        int noteDurationMs = (60000 / bpm).round();
+
         if (_pitchAccuracy > 0.8 && _lastAccuracy <= 0.8) {
           _audioService.playCorrectSound();
           _noteProgressController.forward();
@@ -435,7 +443,7 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
             isCorrect: true,
           );
 
-          Future.delayed(const Duration(milliseconds: 1500), () {
+          Future.delayed(Duration(milliseconds: noteDurationMs), () {
             if (_pitchAccuracy > 0.8 && _isListening) {
               _nextNote();
             }
