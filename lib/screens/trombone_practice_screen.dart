@@ -431,6 +431,10 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
         int bpm = _exercises[_currentExercise].tempo;
         int noteDurationMs = (60000 / bpm).round();
 
+        double secondsPerBeat = 60.0 / bpm;
+        double expectedTime = _currentNoteIndex * secondsPerBeat;
+        double playedTime = _totalPracticeTime.inMilliseconds / 1000.0;
+
         if (_pitchAccuracy > 0.8 && _lastAccuracy <= 0.8) {
           _audioService.playCorrectSound();
           _noteProgressController.forward();
@@ -438,8 +442,8 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
           _recordPlayedNote(
             expectedNote: targetNote,
             playedNote: detectedNote,
-            expectedTime: _currentNoteIndex.toDouble(),
-            playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
+            expectedTime: expectedTime,
+            playedTime: playedTime,
             isCorrect: true,
           );
 
@@ -457,8 +461,8 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
           _recordPlayedNote(
             expectedNote: targetNote,
             playedNote: detectedNote,
-            expectedTime: _currentNoteIndex.toDouble(),
-            playedTime: _totalPracticeTime.inMilliseconds / 1000.0,
+            expectedTime: expectedTime,
+            playedTime: playedTime,
             isCorrect: false,
           );
         }
@@ -585,8 +589,10 @@ class _TrombonePracticeScreenState extends State<TrombonePracticeScreen>
     double totalTimingAccuracy = 0.0;
     for (var note in _playedNotes) {
       double timeDiff = (note.playedTime - note.expectedTime).abs();
-      double timingAccuracy = 100 - (timeDiff * 10).clamp(0, 100);
+      // double timingAccuracy = 100 - (timeDiff * 10).clamp(0, 100);
+      double timingAccuracy = math.max(0, 100 - (timeDiff * 50));
       totalTimingAccuracy += timingAccuracy;
+      print('  Nota ${note.expectedPitch}: ${timeDiff.toStringAsFixed(2)}s de diferença = ${timingAccuracy.toStringAsFixed(1)}%');
     }
 
     return totalTimingAccuracy / _playedNotes.length;
