@@ -210,6 +210,5 @@ O arquivo gerado estará em:
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.0+-0175C2?logo=dart)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-21+-3DDC84?logo=android)](https://developer.android.com)
-[![License](https://img.shields.io/badge/License-Open_Source-green.svg)](LICENSE)
 
 </div>
