@@ -2,6 +2,17 @@
 
 Um aplicativo Android de aprendizado interativo de trombone de vara, desenvolvido em Flutter para ajudar iniciantes a dominarem o instrumento através de prática guiada, feedback visual em tempo real e exercícios personalizáveis.
 
+<div align="center">
+
+<img src="assets/images/qrcode.png" alt="QR Code Download APK" width="250">
+
+**📱 Escaneie o QR Code para baixar o APK**
+
+[![Download APK](https://img.shields.io/badge/Download-APK-brightgreen?style=for-the-badge&logo=android)](https://drive.google.com/file/d/1AJJmDQKTIiNJU6JyzrAk60uAtvTg4DDm/view)
+
+</div>
+
+---
 ## 📱 Sobre o Projeto
 
 GlideTrombone é uma aplicação educacional que transforma o tablet e smartphone (com foco em tablets) em uma ferramenta de aprendizado para trombone de vara. Com interface intuitiva e recursos de áudio MIDI, o app oferece uma experiência prática que simula tocar o instrumento real, incluindo metrônomo, afinador e sistema de partituras interativas.
